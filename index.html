@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Elektronická stazka – Průvodce</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column}
+    .appbar{padding:.8rem 1rem;background:rgba(2,6,23,.6);backdrop-filter:saturate(1.2) blur(6px);border-bottom:1px solid rgba(148,163,184,.25)}
+    .toprow{display:flex;align-items:center;gap:1rem;justify-content:space-between}
+    .brand{font-weight:800;letter-spacing:.3px}
+    .status{display:flex;gap:1rem;font-size:.9rem;color:#94a3b8}
+    .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:.4rem}
+    .ok{background:#22c55e}.info{background:#3b82f6}.warn{background:#f59e0b}
+    .stepper{display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap}
+    .step{padding:.35rem .6rem;border-radius:999px;border:1px solid rgba(148,163,184,.3);color:#94a3b8;font-weight:700;font-size:.85rem}
+    .step.active{background:#0ea5e9;color:#fff;border-color:transparent}
+    .step.done{background:#22c55e;color:#062b1e;border-color:transparent}
+
+    .main{display:flex;gap:12px;padding:12px;flex:1}
+    .left{flex:1.2;display:flex;flex-direction:column;gap:10px}
+    .right{flex:0 0 480px;display:flex;flex-direction:column;gap:10px}
+    .card{background:rgba(2,6,23,.7);border:1px solid rgba(148,163,184,.25);border-radius:14px;padding:12px}
+    h2{font-size:1.1rem;margin-bottom:.4rem}
+    .muted{color:#94a3b8}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+    .row{display:grid;gap:.25rem;margin-bottom:.5rem}
+    label{font-size:.85rem;color:#94a3b8}
+    input,select,textarea{background:#0b1324;color:#e2e8f0;border:1px solid #22314b;border-radius:10px;padding:.6rem .7rem;font-size:.95rem}
+    .btn{border:1px solid #334155;background:#0b1324;color:#e2e8f0;padding:.7rem 1rem;border-radius:12px;cursor:pointer;font-weight:800}
+    .btn.primary{background:#0ea5e9;border-color:#0284c7}
+    .btn.danger{background:#ef4444;border-color:#b91c1c}
+    .btn.ghost{background:transparent}
+    .actions{display:flex;gap:.5rem;flex-wrap:wrap}
+
+    .mapwrap{display:flex;flex-direction:column;gap:.6rem;height:420px}
+    .map{flex:1;border-radius:12px;background:linear-gradient(45deg,#0b1324,#0b162a);border:1px solid #22314b;position:relative;overflow:hidden}
+    .road-h,.road-v{position:absolute;background:#374151;border-radius:2px}
+    .road-h{height:4px;width:100%;top:50%;left:0}
+    .road-v{width:4px;height:100%;left:50%;top:0}
+    .vehicle{position:absolute;width:24px;height:24px;border-radius:50%;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;z-index:5}
+    .vehicle.driving{background:#22c55e}.vehicle.loading{background:#3b82f6}.vehicle.unloading{background:#1d4ed8}.vehicle.idle{background:#f59e0b}.vehicle.break{background:#8b5cf6}.vehicle.maintenance{background:#6b7280}.vehicle.fuel{background:#ef4444}
+    .dotp{position:absolute;width:4px;height:4px;border-radius:50%;background:#1d4ed8;opacity:.8}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem}
+    .kpi{background:#0b1324;border:1px solid #22314b;border-radius:10px;padding:.6rem;text-align:center}
+    .kpi .val{font-size:1.4rem;font-weight:900}
+    .kpi .lbl{font-size:.8rem;color:#94a3b8}
+
+    .screen{display:none}
+    .screen.active{display:block}
+
+    .actions-panel{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem}
+    .actbtn{border:none;border-radius:12px;padding:.85rem;background:linear-gradient(135deg,#334155,#1f2937);color:#e2e8f0;font-weight:800;cursor:pointer}
+    .actbtn.active{background:linear-gradient(135deg,#22c55e,#16a34a)}
+    .actbtn.reco{background:linear-gradient(135deg,#3b82f6,#1d4ed8)}
+
+    .bar{position:sticky;bottom:0;left:0;right:0;padding:.6rem;background:linear-gradient(0deg,rgba(2,6,23,.9),rgba(2,6,23,0));display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(148,163,184,.25);margin-top:.4rem}
+    .small{font-size:.85rem;color:#94a3b8}
+
+    .modal-b{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:50}
+    .modal{width:min(720px,94vw);background:#0b1324;border:1px solid #22314b;border-radius:14px;padding:12px;max-height:90vh;overflow-y:auto}
+    .modal h3{margin-bottom:.4rem}
+    .mfoot{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.6rem}
+
+    .toast{position:fixed;top:14px;right:14px;background:#0ea5e9;color:#fff;padding:.55rem .8rem;border-radius:10px;font-weight:800;transform:translateX(360px);transition:transform .35s;z-index:60}
+    .toast.show{transform:translateX(0)} .toast.err{background:#ef4444} .toast.ok{background:#22c55e}
+
+    /* Saved trips list */
+    .trip-list{max-height:400px;overflow-y:auto;border:1px solid #22314b;border-radius:10px;background:#0b1324}
+    .trip-item{padding:.6rem;border-bottom:1px solid #22314b;display:flex;justify-content:space-between;align-items:center}
+    .trip-item:last-child{border-bottom:none}
+    .trip-info{flex:1}
+    .trip-title{font-weight:800;color:#e2e7eb}
+    .trip-meta{font-size:.8rem;color:#94a3b8;margin-top:.2rem}
+    .trip-actions{display:flex;gap:.3rem}
+    .btn-sm{padding:.4rem .6rem;font-size:.8rem}
+
+    /* Status badges */
+    .status-badge{padding:.2rem .4rem;border-radius:6px;font-size:.7rem;font-weight:800}
+    .status-running{background:#22c55e;color:#fff}
+    .status-completed{background:#3b82f6;color:#fff}
+    .status-paused{background:#f59e0b;color:#000}
+
+    @media (max-width: 980px){
+      .main{flex-direction:column}
+      .right{flex:1}
+      .kpis{grid-template-columns:repeat(2,1fr)}
+    }
+  </style>
+</head>
+<body>
+  <div class="appbar">
+    <div class="toprow">
+      <div class="brand">Elektronická stazka</div>
+      <div class="status">
+        <div><span class="dot ok"></span><span id="st-online">Online</span></div>
+        <div><span class="dot info"></span><span id="st-gps">GPS čekám…</span></div>
+        <div><span id="st-time"></span></div>
+      </div>
+    </div>
+    <div class="stepper" id="stepper">
+      <div class="step" data-step="1">1 Úvod</div>
+      <div class="step" data-step="2">2 Řidič</div>
+      <div class="step" data-step="3">3 Start</div>
+      <div class="step" data-step="4">4 Údržba</div>
+      <div class="step" data-step="5">5 Jízda</div>
+      <div class="step" data-step="6">6 Ukončení</div>
+      <div class="step" data-step="7">7 Sumář</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="left">
+      <div class="card mapwrap">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2>Mapa a trasa</h2>
+          <div class="actions">
+            <button class="btn ghost" id="btnSavedTrips">Uložené stazky</button>
+            <button class="btn ghost" id="btnExportCsv">Export CSV</button>
+            <button class="btn ghost" id="btnExportJson">Export JSON</button>
+            <button class="btn ghost" id="btnExportPdf">Export PDF</button>
+            <button class="btn primary" id="newTripBtn">Start stazky</button>
+          </div>
+        </div>
+        <div class="map" id="map">
+          <div class="road-h"></div>
+          <div class="road-v"></div>
+          <div class="vehicle idle" id="vehicle" style="left:45%;top:45%">🚛</div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="val" id="kpi-speed">0</div><div class="lbl">km/h</div></div>
+          <div class="kpi"><div class="val" id="kpi-tripkm">0</div><div class="lbl">km stazka</div></div>
+          <div class="kpi"><div class="val" id="kpi-odo">0</div><div class="lbl">tachometr km</div></div>
+          <div class="kpi"><div class="val" id="kpi-time">0:00</div><div class="lbl">doba stazky</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Živý stav</h2>
+        <div class="grid-2">
+          <div class="row"><label>Režim</label><input id="ui-mode" disabled></div>
+          <div class="row"><label>GPS</label><input id="ui-gps" disabled></div>
+        </div>
+        <div class="small" id="ui-trip-info">Žádná stazka neběží</div>
+        <div class="bar">
+          <div class="small">Fix: <span id="ui-fix">—</span></div>
+          <div class="actions">
+            <button class="btn danger" id="btnGotoEnd" disabled>Ukončit stazku</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="card screen active" id="screen-1">
+        <h2>Úvod</h2>
+        <p class="muted" style="margin:.4rem 0">Průvodce vás provede od startu po finální sumář. Připravte údaje o řidiči a vozidle.</p>
+        <div class="bar">
+          <div class="small">Krok 1/7</div>
+          <button class="btn primary" id="cta-1">Začít</button>
+        </div>
+      </div>
+
+      <div class="card screen" id="screen-2">
+        <h2>Řidič a vozidlo</h2>
+        <div class="row"><label>Řidič</label><input id="inp-driverName" placeholder="Jméno a příjmení"></div>
+        <div class="row"><label>ID řidiče</label><input id="inp-driverId" placeholder="ID / číslo"></div>
+        <div class="row"><label>RZ vozidla</label><input id="inp-vehiclePlate" placeholder="SPZ / RZ"></div>
+        <div class="bar">
+          <button class="btn" id="back-2">Zpět</button>
+          <button class="btn primary" id="cta-2">Pokračovat</button>
+        </div>
+      </div>
+
+      <div class="card screen" id="screen-3">
+        <h2>Start stazky</h2>
+        <div class="grid-2">
+          <div class="row"><label>Číslo stazky</label><input id="inp-tripNo" type="number"></div>
+          <div class="row"><label>Start čas</label><input id="inp-startTime" type="datetime-local"></div>
+        </div>
+        <div class="grid-2">
+          <div class="row"><label>Start místo</label><input id="inp-startPlace" placeholder="Z GPS nebo uprav"></div>
+          <div class="row" style="align-items:end"><button class="btn" id="btnStartFromGps">Z GPS</button></div>
+        </div>
+        <div class="grid-2">
+          <div class="row"><label>Tachometr (km)</label><input id="inp-odoStart" type="number" inputmode="decimal"></div>
+          <div class="row"><label>Palivo (l)</label><input id="inp-fuelStart" type="number" inputmode="decimal" step="0.1"></div>
+        </div>
+        <div class="grid-2">
+          <div class="row"><label>Objednatel</label><input id="inp-client"></div>
+          <div class="row"><label>Pro koho</label><input id="inp-for"></div>
+        </div>
+        <div class="row"><label>Co se veze</label><input id="inp-cargo" placeholder="Popis nákladu a množství"></div>
+        <div class="bar">
+          <button class="btn" id="back-3">Zpět</button>
+          <button class="btn primary" id="cta-3">Pokračovat</button>
+        </div>
+      </div>
+
+      <div class="card screen" id="screen-4">
+        <h2>Údržba před jízdou</h2>
+        <p class="muted" style="margin:.4rem 0">Chcete zahájit stazku režimem údržba (PTO/servis), nebo rovnou jízdou?</p>
+        <div class="actions">
+          <button class="btn" id="btnStartDrive">Začít jízdou</button>
+          <button class="btn" id="btnStartMaint">Zahájit údržbu</button>
+        </div>
+        <div class="bar">
+          <button class="btn" id="back-4">Zpět</button>
+          <button class="btn primary" id="cta-4">Pokračovat</button>
+        </div>
+      </div>
+
+      <div class="card screen" id="screen-5">
+        <h2>Jízda</h2>
+        <div class="actions-panel" id="modeButtons">
+          <button class="actbtn" data-mode="driving">🚛 Jízda</button>
+          <button class="actbtn" data-mode="loading">📦 Nakládka</button>
+          <button class="actbtn" data-mode="unloading">📤 Vykládka</button>
+          <button class="actbtn" data-mode="idle">⏸️ Prostoj</button>
+          <button class="actbtn" data-mode="break">☕ Přestávka</button>
+          <button class="actbtn" data-mode="maintenance">🔧 Údržba</button>
+          <button class="actbtn" data-mode="fuel">⛽ Tankování</button>
+        </div>
+        <div class="bar">
+          <div class="small">Krok 5/7</div>
+          <button class="btn danger" id="cta-5">Ukončit stazku</button>
+        </div>
+      </div>
+
+      <div class="card screen" id="screen-6">
+        <h2>Ukončení stazky</h2>
+        <div class="grid-2">
+          <div class="row"><label>Konec čas</label><input id="inp-endTime" type="datetime-local"></div>
+          <div class="row"><label>Konec místo</label><input id="inp-endPlace"></div>
+        </div>
+        <div class="grid-2">
+          <div class="row"><label>Tachometr (km)</label><input id="inp-odoEnd" type="number" inputmode="decimal"></div>
+          <div class="row"><label>Palivo (l)</label><input id="inp-fuelEnd" type="number" inputmode="decimal" step="0.1"></div>
+        </div>
+        <div class="bar">
+          <button class="btn" id="back-6">Zpět</button>
+          <button class="btn primary" id="cta-6">Uložit a zobrazit sumář</button>
+        </div>
+      </div>
+
+      <div class="card screen" id="screen-7">
+        <h2>Sumář stazky</h2>
+        <div id="summary" class="muted" style="margin:.5rem 0"></div>
+        <div class="actions">
+          <button class="btn ghost" id="btnNewTrip">Nová stazka</button>
+        </div>
+        <div class="bar">
+          <div class="small">Krok 7/7</div>
+          <button class="btn primary" id="cta-7">Zahájit novou</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal zastavení >10s -->
+  <div class="modal-b" id="modalStopped">
+    <div class="modal">
+      <h3>Vozidlo stojí déle než 10 s</h3>
+      <p class="muted" style="margin:.35rem 0">Vyberte aktuální činnost:</p>
+      <div class="actions" style="flex-wrap:wrap">
+        <button class="btn" data-stop="loading">Nakládka</button>
+        <button class="btn" data-stop="unloading">Vykládka</button>
+        <button class="btn" data-stop="idle">Prostoj</button>
+        <button class="btn" data-stop="break">Přestávka</button>
+        <button class="btn" data-stop="maintenance">Údržba</button>
+        <button class="btn" data-stop="fuel">Tankování</button>
+        <button class="btn" data-stop="dismiss">Ignorovat</button>
+      </div>
+      <div class="mfoot">
+        <button class="btn" id="closeStopped">Zavřít</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal uložené stazky -->
+  <div class="modal-b" id="modalSavedTrips">
+    <div class="modal">
+      <h3>Uložené stazky</h3>
+      <div class="trip-list" id="tripList">
+        <div class="muted" style="padding:1rem;text-align:center">Načítám...</div>
+      </div>
+      <div class="mfoot">
+        <button class="btn" id="closeSavedTrips">Zavřít</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal editace stazky -->
+  <div class="modal-b" id="modalEditTrip">
+    <div class="modal">
+      <h3>Editace stazky</h3>
+      <div class="row"><label>Číslo stazky</label><input id="edit-tripNo" type="number"></div>
+      <div class="row"><label>Řidič</label><input id="edit-driverName"></div>
+      <div class="row"><label>RZ vozidla</label><input id="edit-vehiclePlate"></div>
+      <div class="row"><label>Objednatel</label><input id="edit-client"></div>
+      <div class="row"><label>Pro koho</label><input id="edit-for"></div>
+      <div class="row"><label>Co se veze</label><input id="edit-cargo"></div>
+      <div class="mfoot">
+        <button class="btn" id="cancelEditTrip">Zrušit</button>
+        <button class="btn primary" id="saveEditTrip">Uložit</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Utilities
+    const $ = s => document.querySelector(s);
+    const $$ = s => document.querySelectorAll(s);
+    const show = el => el.style.display = 'flex';
+    const hide = el => el.style.display = 'none';
+    const toast = (m,t='ok')=>{ const el=$('#toast'); el.textContent=m; el.className='toast show ' + (t==='ok'?'ok':(t==='err'?'err':'')); setTimeout(()=>el.classList.remove('show'),2200); }
+    const fmt2 = n => String(n).padStart(2,'0');
+    const isoLocal = (d=new Date())=>{ const z=d.getTimezoneOffset()*60000; return new Date(d - z).toISOString().slice(0,16)}
+    const haversineKm=(a,b)=>{const R=6371,toRad=d=>d*Math.PI/180;const dLat=toRad(b.lat-a.lat),dLng=toRad(b.lng-a.lng);const la1=toRad(a.lat),la2=toRad(b.lat);const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+
+    // State
+    const state = {
+      step: 1,
+      profile: { driverName:'', driverId:'', vehiclePlate:'' },
+      nextTripNo: 1,
+      lastOdoKm: 0,
+      lastFuelL: 0,
+      gps: { haveFix:false, lat:50.0755, lng:14.4378, speedKmh:0 },
+      routeDots: 0,
+      watchId: null,
+      running: {
+        trip: null,
+        mode: 'idle',
+        modeSince: null,
+        durations: {},
+        lastPos: null,
+        stopSec: 0
+      },
+      trips: [],
+      editingTrip: null
+    };
+
+    // Storage
+    function loadStorage(){
+      try{
+        const data = JSON.parse(localStorage.getItem('trip-wizard')||'{}');
+        if(data.profile) state.profile = data.profile;
+        if(data.nextTripNo) state.nextTripNo = data.nextTripNo;
+        if(typeof data.lastOdoKm==='number') state.lastOdoKm = data.lastOdoKm;
+        if(typeof data.lastFuelL==='number') state.lastFuelL = data.lastFuelL;
+        if(Array.isArray(data.trips)) state.trips = data.trips;
+        
+        // Check for running trip to resume
+        if(data.running && data.running.trip){
+          state.running.trip = data.running.trip;
+          state.running.mode = data.running.mode || 'idle';
+          state.running.modeSince = data.running.modeSince ? new Date(data.running.modeSince) : Date.now();
+          state.running.durations = data.running.durations || {};
+          state.running.lastPos = data.running.lastPos;
+          state.running.stopSec = 0;
+          
+          // Resume from step 5 (driving)
+          setStep(5);
+          toast('Obnovena běžící stazka #' + state.running.trip.tripNo, 'ok');
+        }
+      }catch(e){}
+    }
+    function saveStorage(){
+      const data = {
+        profile: state.profile,
+        nextTripNo: state.nextTripNo,
+        lastOdoKm: state.lastOdoKm,
+        lastFuelL: state.lastFuelL,
+        trips: state.trips,
+        running: state.running.trip ? {
+          trip: state.running.trip,
+          mode: state.running.mode,
+          modeSince: state.running.modeSince,
+          durations: state.running.durations,
+          lastPos: state.running.lastPos
+        } : null
+      };
+      try{ localStorage.setItem('trip-wizard', JSON.stringify(data)); }catch(e){}
+    }
+
+    // Stepper
+    function setStep(n){
+      state.step = n;
+      $$('.screen').forEach(s=>s.classList.remove('active'));
+      const screen = $('#screen-'+n);
+      if(screen) screen.classList.add('active');
+      $$('#stepper .step').forEach(st=>{
+        const idx = parseInt(st.getAttribute('data-step'));
+        st.classList.remove('active','done');
+        if(idx < n) st.classList.add('done'); else if(idx===n) st.classList.add('active');
+      });
+      // enable/disable end button
+      $('#btnGotoEnd').disabled = !(state.running.trip && (n===5));
+    }
+
+    // Screens wiring
+    function wireScreens(){
+      // 1 Intro
+      $('#cta-1').addEventListener('click', ()=> setStep(2));
+
+      // 2 Profile
+      $('#back-2').addEventListener('click', ()=> setStep(1));
+      $('#cta-2').addEventListener('click', ()=>{
+        const name = $('#inp-driverName').value.trim();
+        const plate = $('#inp-vehiclePlate').value.trim();
+        state.profile.driverName = name;
+        state.profile.driverId = $('#inp-driverId').value.trim();
+        state.profile.vehiclePlate = plate;
+        if(!name || !plate){ toast('Vyplňte jméno a RZ','err'); return; }
+        saveStorage();
+        setStep(3);
+      });
+
+      // 3 Start
+      $('#back-3').addEventListener('click', ()=> setStep(2));
+      $('#btnStartFromGps').addEventListener('click', ()=> $('#inp-startPlace').value = gpsStr());
+      $('#cta-3').addEventListener('click', ()=>{
+        const tripNo = parseInt($('#inp-tripNo').value || state.nextTripNo);
+        const startTime = new Date($('#inp-startTime').value);
+        if(isNaN(startTime.getTime())){ toast('Zadejte čas startu','err'); return; }
+        const startPlace = $('#inp-startPlace').value.trim() || gpsStr();
+        const odo = parseFloat($('#inp-odoStart').value || state.lastOdoKm || 0);
+        const fuel = parseFloat($('#inp-fuelStart').value || state.lastFuelL || 0);
+        const client = $('#inp-client').value.trim();
+        const forWho = $('#inp-for').value.trim();
+        const cargo = $('#inp-cargo').value.trim();
+
+        state.running.tripDraft = { tripNo, startTime, startPlace, odoStart:odo, fuelStart:fuel, client, forWho, cargo };
+        setStep(4);
+      });
+
+      // 4 Maintenance choice
+      $('#back-4').addEventListener('click', ()=> setStep(3));
+      $('#btnStartDrive').addEventListener('click', ()=> startTrip('driving'));
+      $('#btnStartMaint').addEventListener('click', ()=> startTrip('maintenance'));
+      $('#cta-4').addEventListener('click', ()=> startTrip('driving'));
+
+      // 5 Live
+      $('#cta-5').addEventListener('click', ()=> goEnd());
+      $('#btnGotoEnd').addEventListener('click', ()=> goEnd());
+      $$('#modeButtons .actbtn').forEach(b=>{
+        b.addEventListener('click', ()=> setMode(b.getAttribute('data-mode'),'manual'));
+      });
+
+      // 6 End
+      $('#back-6').addEventListener('click', ()=> setStep(5));
+      $('#cta-6').addEventListener('click', ()=> finalizeTrip());
+
+      // 7 Summary
+      $('#btnNewTrip').addEventListener('click', ()=> setStep(3));
+      $('#cta-7').addEventListener('click', ()=> setStep(3));
+
+      // stopped modal
+      $('#closeStopped').addEventListener('click', ()=> hide($('#modalStopped')));
+      $$('#modalStopped [data-stop]').forEach(b=>{
+        b.addEventListener('click', ()=>{
+          const act = b.getAttribute('data-stop');
+          hide($('#modalStopped'));
+          if(act!=='dismiss') setMode(act,'auto-stop');
+        });
+      });
+
+      // saved trips modal
+      $('#btnSavedTrips').addEventListener('click', ()=> showSavedTrips());
+      $('#closeSavedTrips').addEventListener('click', ()=> hide($('#modalSavedTrips')));
+      
+      // edit trip modal
+      $('#cancelEditTrip').addEventListener('click', ()=> hide($('#modalEditTrip'));
+      $('#saveEditTrip').addEventListener('click', ()=> saveEditedTrip());
+
+      // exports
+      $('#btnExportCsv').addEventListener('click', exportCsv);
+      $('#btnExportJson').addEventListener('click', exportJson);
+      $('#btnExportPdf').addEventListener('click', exportPdf);
+    }
+
+    // GPS
+    function startGps(){
+      if(!('geolocation' in navigator)) { $('#st-gps').textContent='GPS nedostupná'; return; }
+      if(state.watchId) return;
+      state.watchId = navigator.geolocation.watchPosition(pos=>{
+        state.gps.haveFix = true;
+        const { latitude, longitude, speed } = pos.coords;
+        const prev = state.running.lastPos;
+        const now = { lat: latitude, lng: longitude, at: Date.now() };
+
+        // speed
+        if(typeof speed === 'number' && !Number.isNaN(speed)) state.gps.speedKmh = Math.max(0, speed*3.6);
+        else if(prev){ const sec=(now.at - prev.at)/1000; const km=haversineKm(prev,now); state.gps.speedKmh = sec>0 ? (km/sec)*3600 : state.gps.speedKmh; }
+
+        // distance accumulation
+        if(state.running.trip && prev){
+          const km = haversineKm(prev, now);
+          if(km>0.005){
+            state.running.trip.distanceKm += km;
+            state.lastOdoKm += km;
+          }
+        }
+
+        state.running.lastPos = now;
+        state.gps.lat = latitude; state.gps.lng = longitude;
+
+        drawRouteDot(now);
+      }, err=>{
+        state.gps.haveFix=false; $('#st-gps').textContent='GPS chyba'; 
+      }, { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
+    }
+    const gpsStr = ()=> `${(state.gps.lat||0).toFixed(5)}, ${(state.gps.lng||0).toFixed(5)}`;
+
+    // Map drawing
+    function drawRouteDot(p){
+      const map = $('#map'); if(!map) return;
+      const x = 50 + (p.lng - state.gps.lng) * 3000;
+      const y = 50 - (p.lat - state.gps.lat) * 3000;
+      const d = document.createElement('div'); d.className='dotp'; d.style.left=`${Math.max(0,Math.min(98,x))}%`; d.style.top=`${Math.max(0,Math.min(98,y))}%`;
+      map.appendChild(d); state.routeDots++;
+      if(state.routeDots>900){ for(let i=0;i<200;i++) { if(map.firstChild) map.removeChild(map.firstChild); } state.routeDots=700; }
+      const veh=$('#vehicle'); veh.style.left=`${50 + Math.max(-45,Math.min(45,(p.lng - state.gps.lng)*3000))}%`; veh.style.top=`${50 - Math.max(-45,Math.min(45,(p.lat - state.gps.lat)*3000))}%`;
+    }
+
+    // Modes & timers
+    function setMode(mode, src='auto'){
+      const now = Date.now();
+      const old = state.running.mode;
+      if(state.running.modeSince){
+        const elapsed = Math.floor((now - state.running.modeSince)/1000);
+        state.running.durations[old] = (state.running.durations[old]||0) + Math.max(0,elapsed);
+      }
+      state.running.mode = mode;
+      state.running.modeSince = now;
+      $('#vehicle').className = 'vehicle ' + mode;
+      $('#ui-mode').value = mode;
+      $$('#modeButtons .actbtn').forEach(b=>{
+        b.classList.toggle('active', b.getAttribute('data-mode')===mode);
+      });
+    }
+
+    function tick1s(){
+      $('#st-time').textContent = new Date().toLocaleTimeString('cs-CZ');
+      $('#st-gps').textContent = state.gps.haveFix ? 'GPS aktivní' : 'GPS čekám…';
+
+      // stop detection (only in driving)
+      if(state.running.trip){
+        const sp = state.gps.speedKmh||0;
+        if(state.running.mode==='driving'){
+          state.running.stopSec = sp<2 ? state.running.stopSec+1 : 0;
+          if(state.running.stopSec===10) show($('#modalStopped'));
+        } else {
+          state.running.stopSec = 0;
+        }
+      }
+
+      // UI sync
+      $('#kpi-speed').textContent = Math.round(state.gps.speedKmh);
+      $('#kpi-tripkm').textContent = state.running.trip ? state.running.trip.distanceKm.toFixed(1) : '0';
+      $('#kpi-odo').textContent = Math.round(state.lastOdoKm);
+      $('#ui-gps').value = gpsStr();
+      $('#ui-fix').textContent = state.gps.haveFix ? 'ANO' : 'NE';
+
+      if(state.running.trip){
+        const start = new Date(state.running.trip.startAt).getTime();
+        const sec = Math.floor((Date.now()-start)/1000);
+        const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60);
+        $('#kpi-time').textContent = `${h}:${fmt2(m)}`;
+        $('#ui-trip-info').textContent = `#${state.running.trip.tripNo} • od ${new Date(state.running.trip.startAt).toLocaleString('cs-CZ')}`;
+      } else {
+        $('#kpi-time').textContent = '0:00';
+        $('#ui-trip-info').textContent = 'Žádná stazka neběží';
+      }
+
+      saveStorage();
+    }
+
+    // Trip lifecycle
+    function startTrip(initialMode){
+      const d = state.running.tripDraft;
+      if(!d){ toast('Nejprve vyplňte start','err'); return; }
+      const trip = {
+        id: crypto?.randomUUID?.() || String(Date.now()),
+        tripNo: d.tripNo,
+        driverName: state.profile.driverName,
+        driverId: state.profile.driverId,
+        vehiclePlate: state.profile.vehiclePlate,
+        client: d.client, forWho: d.forWho, cargo: d.cargo,
+        startAt: d.startTime.toISOString(),
+        startPlace: d.startPlace,
+        startCoords: { lat: state.gps.lat, lng: state.gps.lng },
+        endAt: null, endPlace:'', endCoords:null,
+        odoStartKm: d.odoStart, odoEndKm:null,
+        fuelStartL: d.fuelStart, fuelEndL:null,
+        distanceKm: 0,
+        durations: { driving:0, loading:0, unloading:0, idle:0, break:0, maintenance:0, fuel:0 },
+        status: 'running'
+      };
+      state.running.trip = trip;
+      state.running.durations = {...trip.durations};
+      state.running.modeSince = Date.now();
+      state.running.stopSec = 0;
+      state.running.lastPos = state.running.lastPos || { lat: state.gps.lat, lng: state.gps.lng, at: Date.now() };
+
+      state.lastOdoKm = trip.odoStartKm;
+      state.lastFuelL = trip.fuelStartL;
+      state.nextTripNo = Math.max(state.nextTripNo, (trip.tripNo||0)+1);
+
+      setMode(initialMode,'start');
+      setStep(5);
+      toast(`Stazka #${trip.tripNo} zahájena`,'ok');
+      saveStorage();
+    }
+
+    function goEnd(){
+      if(!state.running.trip){ toast('Žádná stazka neběží','err'); return; }
+      // prefill end screen
+      $('#inp-endTime').value = isoLocal(new Date());
+      $('#inp-endPlace').value = gpsStr();
+      $('#inp-odoEnd').value = Math.round(state.lastOdoKm||0);
+      $('#inp-fuelEnd').value = state.lastFuelL||0;
+      setStep(6);
+    }
+
+    function finalizeTrip(){
+      const t = state.running.trip; if(!t){ return; }
+      // close current mode
+      setMode(state.running.mode,'finalize');
+
+      t.endAt = new Date($('#inp-endTime').value).toISOString();
+      t.endPlace = ($('#inp-endPlace').value.trim() || gpsStr());
+      t.endCoords = { lat: state.gps.lat, lng: state.gps.lng };
+      t.odoEndKm = parseFloat($('#inp-odoEnd').value || state.lastOdoKm || 0);
+      t.fuelEndL = parseFloat($('#inp-fuelEnd').value || state.lastFuelL || 0);
+
+      // prefer tachometer delta if larger than GPS
+      const odoKm = Math.max(0,(t.odoEndKm||0)-(t.odoStartKm||0));
+      if(odoKm > (t.distanceKm||0)) t.distanceKm = odoKm;
+
+      // copy durations
+      Object.assign(t.durations, state.running.durations);
+
+      // update rolling
+      state.lastOdoKm = t.odoEndKm || state.lastOdoKm;
+      state.lastFuelL = t.fuelEndL || state.lastFuelL;
+
+      // Mark as completed and save
+      t.status = 'completed';
+      state.trips.push(t);
+      saveStorage();
+
+      // clear running
+      state.running.trip = null;
+      state.running.mode = 'idle';
+      state.running.modeSince = null;
+
+      buildSummary(t);
+      setStep(7);
+      toast('Stazka ukončena','ok');
+    }
+
+    function buildSummary(t){
+      const fmtDur=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return `${h}:${fmt2(m)}`;}
+      const html = `
+        <div style="display:grid;gap:.4rem">
+          <div><strong>Stazka #</strong> ${t.tripNo}</div>
+          <div><strong>Řidič</strong>: ${t.driverName} (${t.driverId})</div>
+          <div><strong>Vozidlo</strong>: ${t.vehiclePlate}</div>
+          <div><strong>Objednatel</strong>: ${t.client||'—'} • <strong>Pro koho</strong>: ${t.forWho||'—'}</div>
+          <div><strong>Náklad</strong>: ${t.cargo||'—'}</div>
+          <div><strong>Od</strong>: ${new Date(t.startAt).toLocaleString('cs-CZ')} • ${t.startPlace}</div>
+          <div><strong>Do</strong>: ${new Date(t.endAt).toLocaleString('cs-CZ')} • ${t.endPlace}</div>
+          <div><strong>Vzdálenost</strong>: ${t.distanceKm.toFixed(2)} km</div>
+          <div><strong>Tachometr</strong>: ${t.odoStartKm} → ${t.odoEndKm}</div>
+          <div><strong>Palivo</strong>: ${t.fuelStartL} l → ${t.fuelEndL} l</div>
+          <div style="margin-top:.3rem"><strong>Časy</strong>:
+            Jízda ${fmtDur(t.durations.driving||0)},
+            Nakládka ${fmtDur(t.durations.loading||0)},
+            Vykládka ${fmtDur(t.durations.unloading||0)},
+            Prostoj ${fmtDur(t.durations.idle||0)},
+            Přestávka ${fmtDur(t.durations.break||0)},
+            Údržba ${fmtDur(t.durations.maintenance||0)},
+            Tankování ${fmtDur(t.durations.fuel||0)}
+          </div>
+        </div>
+      `;
+      $('#summary').innerHTML = html;
+    }
+
+    // Saved trips management
+    function showSavedTrips(){
+      const list = $('#tripList');
+      if(state.trips.length === 0){
+        list.innerHTML = '<div class="muted" style="padding:1rem;text-align:center">Žádné uložené stazky</div>';
+        show($('#modalSavedTrips'));
+        return;
+      }
+
+      list.innerHTML = state.trips.map(trip => {
+        const status = trip.status === 'running' ? 'running' : 'completed';
+        const statusText = trip.status === 'running' ? 'Běží' : 'Dokončeno';
+        const statusClass = trip.status === 'running' ? 'status-running' : 'status-completed';
+        
+        return `
+          <div class="trip-item">
+            <div class="trip-info">
+              <div class="trip-title">Stazka #${trip.tripNo}</div>
+              <div class="trip-meta">
+                ${trip.driverName} • ${trip.vehiclePlate}<br>
+                ${new Date(trip.startAt).toLocaleString('cs-CZ')} • ${trip.distanceKm?.toFixed(1) || 0} km
+              </div>
+            </div>
+            <div class="trip-actions">
+              <span class="status-badge ${statusClass}">${statusText}</span>
+              <button class="btn btn-sm" onclick="editTrip('${trip.id}')">Edit</button>
+              <button class="btn btn-sm" onclick="showTripSummary('${trip.id}')">Sumář</button>
+              <button class="btn btn-sm danger" onclick="deleteTrip('${trip.id}')">Smazat</button>
+              ${trip.status === 'running' ? `<button class="btn btn-sm primary" onclick="resumeTrip('${trip.id}')">Pokračovat</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      show($('#modalSavedTrips'));
+    }
+
+    function editTrip(tripId){
+      const trip = state.trips.find(t => t.id === tripId);
+      if(!trip) return;
+      
+      state.editingTrip = trip;
+      $('#edit-tripNo').value = trip.tripNo;
+      $('#edit-driverName').value = trip.driverName;
+      $('#edit-vehiclePlate').value = trip.vehiclePlate;
+      $('#edit-client').value = trip.client || '';
+      $('#edit-for').value = trip.forWho || '';
+      $('#edit-cargo').value = trip.cargo || '';
+      
+      hide($('#modalSavedTrips'));
+      show($('#modalEditTrip'));
+    }
+
+    function saveEditedTrip(){
+      if(!state.editingTrip) return;
+      
+      const trip = state.editingTrip;
+      trip.tripNo = parseInt($('#edit-tripNo').value);
+      trip.driverName = $('#edit-driverName').value.trim();
+      trip.vehiclePlate = $('#edit-vehiclePlate').value.trim();
+      trip.client = $('#edit-client').value.trim();
+      trip.forWho = $('#edit-for').value.trim();
+      trip.cargo = $('#edit-cargo').value.trim();
+      
+      saveStorage();
+      hide($('#modalEditTrip'));
+      toast('Stazka upravena', 'ok');
+      state.editingTrip = null;
+    }
+
+    function deleteTrip(tripId){
+      if(!confirm('Opravdu smazat tuto stazku?')) return;
+      
+      state.trips = state.trips.filter(t => t.id !== tripId);
+      saveStorage();
+      toast('Stazka smazána', 'ok');
+      showSavedTrips();
+    }
+
+    function showTripSummary(tripId){
+      const trip = state.trips.find(t => t.id === tripId);
+      if(!trip) return;
+      
+      buildSummary(trip);
+      hide($('#modalSavedTrips'));
+      setStep(7);
+    }
+
+    function resumeTrip(tripId){
+      const trip = state.trips.find(t => t.id === tripId);
+      if(!trip || trip.status !== 'running') return;
+      
+      // Restore running state
+      state.running.trip = trip;
+      state.running.mode = 'idle';
+      state.running.modeSince = Date.now();
+      state.running.durations = {...trip.durations};
+      state.running.stopSec = 0;
+      
+      // Update profile from trip
+      state.profile.driverName = trip.driverName;
+      state.profile.driverId = trip.driverId;
+      state.profile.vehiclePlate = trip.vehiclePlate;
+      
+      hide($('#modalSavedTrips'));
+      setStep(5);
+      toast(`Obnovena stazka #${trip.tripNo}`, 'ok');
+      saveStorage();
+    }
+
+    // Export functions
+    function exportCsv(){
+      const rows = [['type','time','detail']];
+      state.trips.forEach(t=>{
+        rows.push(['trip', t.startAt, `#${t.tripNo}; driver=${t.driverName}; vehicle=${t.vehiclePlate}; from=${t.startPlace}; to=${t.endPlace||'-'}; km=${t.distanceKm.toFixed(2)}; odo=${t.odoStartKm}->${t.odoEndKm}; fuel=${t.fuelStartL}->${t.fuelEndL}`]);
+        rows.push(['durations', t.endAt||'', `driving=${t.durations.driving||0};loading=${t.durations.loading||0};unloading=${t.durations.unloading||0};idle=${t.durations.idle||0};break=${t.durations.break||0};maintenance=${t.durations.maintenance||0};fuel=${t.durations.fuel||0}`]);
+      });
+      const csv = rows.map(r=>r.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(',')).join('\n');
+      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); a.download=`stazky_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    }
+    
+    function exportJson(){
+      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify({profile:state.profile,trips:state.trips},null,2)],{type:'application/json'})); a.download=`stazky_${new Date().toISOString().slice(0,10)}.json`; a.click();
+    }
+    
+    function exportPdf(){
+      // Simple PDF generation using browser's print functionality
+      const printWindow = window.open('', '_blank');
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Stazky - ${new Date().toLocaleDateString('cs-CZ')}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .trip { margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; }
+            .header { font-weight: bold; font-size: 18px; margin-bottom: 10px; }
+            .row { margin: 5px 0; }
+            .label { font-weight: bold; display: inline-block; width: 120px; }
+          </style>
+        </head>
+        <body>
+          <h1>Elektronické stazky</h1>
+          <p>Exportováno: ${new Date().toLocaleString('cs-CZ')}</p>
+          ${state.trips.map(trip => `
+            <div class="trip">
+              <div class="header">Stazka #${trip.tripNo}</div>
+              <div class="row"><span class="label">Řidič:</span> ${trip.driverName} (${trip.driverId})</div>
+              <div class="row"><span class="label">Vozidlo:</span> ${trip.vehiclePlate}</div>
+              <div class="row"><span class="label">Od:</span> ${new Date(trip.startAt).toLocaleString('cs-CZ')} • ${trip.startPlace}</div>
+              <div class="row"><span class="label">Do:</span> ${trip.endAt ? new Date(trip.endAt).toLocaleString('cs-CZ') : 'Běží'} • ${trip.endPlace || '—'}</div>
+              <div class="row"><span class="label">Vzdálenost:</span> ${trip.distanceKm?.toFixed(2) || 0} km</div>
+              <div class="row"><span class="label">Tachometr:</span> ${trip.odoStartKm} → ${trip.odoEndKm || '—'}</div>
+              <div class="row"><span class="label">Palivo:</span> ${trip.fuelStartL} l → ${trip.fuelEndL || '—'} l</div>
+              <div class="row"><span class="label">Objednatel:</span> ${trip.client || '—'}</div>
+              <div class="row"><span class="label">Náklad:</span> ${trip.cargo || '—'}</div>
+              ${trip.durations ? `
+                <div class="row"><span class="label">Časy:</span> 
+                  Jízda ${Math.floor((trip.durations.driving||0)/3600)}:${String(Math.floor(((trip.durations.driving||0)%3600)/60)).padStart(2,'0')},
+                  Nakládka ${Math.floor((trip.durations.loading||0)/3600)}:${String(Math.floor(((trip.durations.loading||0)%3600)/60)).padStart(2,'0')},
+                  Vykládka ${Math.floor((trip.durations.unloading||0)/3600)}:${String(Math.floor(((trip.durations.unloading||0)%3600)/60)).padStart(2,'0')},
+                  Prostoj ${Math.floor((trip.durations.idle||0)/3600)}:${String(Math.floor(((trip.durations.idle||0)%3600)/60)).padStart(2,'0')},
+                  Přestávka ${Math.floor((trip.durations.break||0)/3600)}:${String(Math.floor(((trip.durations.break||0)%3600)/60)).padStart(2,'0')},
+                  Údržba ${Math.floor((trip.durations.maintenance||0)/3600)}:${String(Math.floor(((trip.durations.maintenance||0)%3600)/60)).padStart(2,'0')},
+                  Tankování ${Math.floor((trip.durations.fuel||0)/3600)}:${String(Math.floor(((trip.durations.fuel||0)%3600)/60)).padStart(2,'0')}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </body>
+        </html>
+      `;
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
+    // Init UI values
+    function prefillStart(){
+      $('#inp-tripNo').value = state.nextTripNo;
+      $('#inp-startTime').value = isoLocal(new Date());
+      $('#inp-startPlace').value = gpsStr();
+      $('#inp-odoStart').value = Math.round(state.lastOdoKm||0);
+      $('#inp-fuelStart').value = state.lastFuelL||0;
+      $('#inp-client').value = '';
+      $('#inp-for').value = '';
+      $('#inp-cargo').value = '';
+    }
+
+    // App init
+    function init(){
+      loadStorage();
+      // prefill profile screen
+      $('#inp-driverName').value = state.profile.driverName || '';
+      $('#inp-driverId').value = state.profile.driverId || '';
+      $('#inp-vehiclePlate').value = state.profile.vehiclePlate || '';
+      prefillStart();
+
+      wireScreens();
+      startGps();
+      setInterval(()=> $('#st-time').textContent = new Date().toLocaleTimeString('cs-CZ'), 1000);
+      setInterval(tick1s, 1000);
+
+      // Default show 1, or 2 if nothing filled
+      if(!state.running.trip) setStep(1);
+    }
+
+    // Hidden: live simulation when no GPS fix (keep UI responsive)
+    setInterval(()=>{
+      if(!state.running.trip) return;
+      if(!state.gps.haveFix){
+        const speed = state.running.mode==='driving' ? (35+Math.random()*25) : 0;
+        state.gps.speedKmh = speed;
+        if(state.running.mode==='driving'){
+          const kmAdd = speed/3600; // per second
+          state.running.trip.distanceKm += kmAdd;
+          state.lastOdoKm += kmAdd;
+        }
+      }
+    },1000);
+
+    // Navigation helpers for CTA
+    // Keep prefill Start screen when entering step 3
+    const observer = new MutationObserver(()=>{
+      if(state.step===3) prefillStart();
+      if(state.step===2){
+        $('#inp-driverName').focus();
+      }
+    });
+    observer.observe(document.body,{attributes:true,subtree:true,attributeFilter:['class']});
+
+    // Make functions globally available for onclick handlers
+    window.editTrip = editTrip;
+    window.showTripSummary = showTripSummary;
+    window.deleteTrip = deleteTrip;
+    window.resumeTrip = resumeTrip;
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
